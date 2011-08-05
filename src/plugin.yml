@@ -1,0 +1,22 @@
+name: EntityInfo
+main: ltguide.entityinfo.EntityInfo
+version: 0.1
+author: ltguide
+description: Entity Info
+commands:
+  entityinfo:
+    description: Entity Info
+    aliases: [einfo,ei]
+    usage: '/<command> @ | Entity ID | #'
+permissions:
+    entityinfo.*:
+        description: 
+        children:
+             entityinfo.use: true
+             entityinfo.reload: false
+    entityinfo.use:
+        description: Allows you to use the command
+        default: op
+    entityinfo.reload:
+        description: Allows you to reload the config file
+        default: op
