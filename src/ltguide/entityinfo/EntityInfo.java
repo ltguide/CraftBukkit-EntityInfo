@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.logging.Logger;
+import java.util.regex.Pattern;
 
 import net.minecraft.server.AxisAlignedBB;
 import net.minecraft.server.EntityPlayer;
@@ -131,6 +132,7 @@ public class EntityInfo extends JavaPlugin {
 			if (args[0].matches("[1-9](?:[0-9]+)?")) entityById(player, Integer.parseInt(args[0]));
 			else if (args[0].equals("#")) entityById(player);
 			else if (args[0].equals("@")) entitySearch(player);
+			else if (args[0].matches("(?i:[a-z]+)")) entityByType(player, args[0]);
 		}
 		catch (CommandException e) {
 			sendMsg(sender, e.getMessage());
@@ -156,6 +158,21 @@ public class EntityInfo extends JavaPlugin {
 		}
 		
 		throw new CommandException(CommandMessage.NOSUCHENTITY);
+	}
+	
+	private void entityByType(Player player, String entityType) throws CommandException {
+		List<Entity> entities = player.getNearbyEntities(64, 128, 64);
+		Pattern pattern = Pattern.compile("Craft" + entityType + ".*", Pattern.CASE_INSENSITIVE);
+		int count = 0;
+		for (Entity entity : entities) {
+			if (pattern.matcher(entity.getClass().getSimpleName()).matches()) {
+				entityInfo(player, entity);
+				if (count == 0) entityLast.put(player.getName(), entity.getEntityId());
+				if (++count == 5) break;
+			}
+		}
+		
+		if (count == 0) throw new CommandException(CommandMessage.NOSUCHENTITIES);
 	}
 	
 	@SuppressWarnings("unchecked")

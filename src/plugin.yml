@@ -1,13 +1,13 @@
 name: EntityInfo
 main: ltguide.entityinfo.EntityInfo
-version: 0.1
+version: 0.2
 author: ltguide
 description: Entity Info
 commands:
   entityinfo:
     description: Entity Info
     aliases: [einfo,ei]
-    usage: '/<command> @ | Entity ID | #'
+    usage: '/<command> <@ | Entity ID | # | Entity Type>'
 permissions:
     entityinfo.*:
         description: 
