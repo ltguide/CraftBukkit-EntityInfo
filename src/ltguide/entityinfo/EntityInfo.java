@@ -2,14 +2,13 @@ package ltguide.entityinfo;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
 
 import net.minecraft.server.AxisAlignedBB;
+import net.minecraft.server.EntityLiving;
 import net.minecraft.server.EntityPlayer;
 import net.minecraft.server.WorldServer;
 
@@ -39,6 +38,7 @@ public class EntityInfo extends JavaPlugin {
 	private final Logger log = Logger.getLogger("Minecraft");
 	private Configuration config;
 	private Map<String, Integer> entityLast;
+	private int maxResults;
 	
 	public PermissionHandler Permissions;
 	public boolean checkPermissions;
@@ -80,6 +80,9 @@ public class EntityInfo extends JavaPlugin {
 		else config.load();
 		
 		boolean saveConfig = false;
+		if (config.getProperty("maxresults") == null) saveConfig = true;
+		maxResults = config.getInt("maxresults", 5);
+		
 		for (CommandMessage message : CommandMessage.values()) {
 			String key = "messages." + message.name().toLowerCase();
 			String value = config.getString(key);
@@ -149,6 +152,7 @@ public class EntityInfo extends JavaPlugin {
 	
 	private void entityById(Player player, int entityId) throws CommandException {
 		entityLast.put(player.getName(), entityId);
+		
 		List<Entity> entities = player.getNearbyEntities(64, 128, 64);
 		for (Entity entity : entities) {
 			if (entity.getEntityId() == entityId) {
@@ -161,21 +165,21 @@ public class EntityInfo extends JavaPlugin {
 	}
 	
 	private void entityByType(Player player, String entityType) throws CommandException {
-		List<Entity> entities = player.getNearbyEntities(64, 128, 64);
 		Pattern pattern = Pattern.compile("Craft" + entityType + ".*", Pattern.CASE_INSENSITIVE);
+		
 		int count = 0;
+		List<Entity> entities = player.getNearbyEntities(64, 128, 64);
 		for (Entity entity : entities) {
 			if (pattern.matcher(entity.getClass().getSimpleName()).matches()) {
 				entityInfo(player, entity);
 				if (count == 0) entityLast.put(player.getName(), entity.getEntityId());
-				if (++count == 5) break;
+				if (++count == maxResults) break;
 			}
 		}
 		
 		if (count == 0) throw new CommandException(CommandMessage.NOSUCHENTITIES);
 	}
 	
-	@SuppressWarnings("unchecked")
 	private void entitySearch(Player player) throws CommandException {
 		WorldServer worldServer = ((CraftWorld) player.getWorld()).getHandle();
 		EntityPlayer entityPlayer = ((CraftPlayer) player).getHandle();
@@ -226,10 +230,17 @@ public class EntityInfo extends JavaPlugin {
 		//world.getBlockAt(rightCorner).setType(Material.GLOWSTONE);
 		
 		AxisAlignedBB bBox = AxisAlignedBB.a(leftCorner.getX(), leftCorner.getY(), leftCorner.getZ(), rightCorner.getX(), rightCorner.getY(), rightCorner.getZ());
-		Set<net.minecraft.server.Entity> entities = new HashSet<net.minecraft.server.Entity>();
+		int count = 0;
 		int distance = 4;
-		while (entities.size() < 5 && distance < 64) {
-			entities.addAll(worldServer.b(entityPlayer, bBox));
+		while (distance < 64) {
+			for (Object object : worldServer.b(entityPlayer, bBox)) {
+				if (object instanceof EntityLiving) {
+					Entity entity = ((net.minecraft.server.Entity) object).getBukkitEntity();
+					entityInfo(player, entity);
+					if (count++ == 0) entityLast.put(player.getName(), entity.getEntityId());
+				}
+				if (count == maxResults) return;
+			}
 			
 			bBox.d(delta.getX(), delta.getY(), delta.getZ());
 			distance += 4;
@@ -238,12 +249,7 @@ public class EntityInfo extends JavaPlugin {
 			//world.getBlockAt(rightCorner.add(delta.toLocation(world))).setType(Material.GLOWSTONE);
 		}
 		
-		if (entities.size() == 0) throw new CommandException(CommandMessage.NOENTITIES);
-		
-		for (net.minecraft.server.Entity entity : entities)
-			entityInfo(player, entity.getBukkitEntity());
-		
-		entityLast.put(player.getName(), entities.iterator().next().id);
+		if (count == 0) throw new CommandException(CommandMessage.NOENTITIES);
 	}
 	
 	private void entityInfo(Player player, Entity entity) {
