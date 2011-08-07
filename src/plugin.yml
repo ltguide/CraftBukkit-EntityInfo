@@ -1,6 +1,6 @@
 name: EntityInfo
 main: ltguide.entityinfo.EntityInfo
-version: 0.3
+version: 0.4
 author: ltguide
 description: Entity Info
 commands:

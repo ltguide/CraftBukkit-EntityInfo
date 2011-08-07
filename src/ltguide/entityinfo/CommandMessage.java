@@ -14,7 +14,7 @@ enum CommandMessage {
 	RELOADABLE("&5Syntax: &f/%s reload"),
 	RELOADDONE("&aReloaded configuration."),
 	NOLASTENTITY("&cYou need to search for an Entity ID first."),
-	INFO("%s &f(#%d) &e%.0f:%.0f:%.0f &f- %s"),
+	INFO("%s &f(#%s) %s &f- &e%.0f:%.0f:%.0f &f- %s"),
 	MOVEMENT("&amove %s"),
 	NOMOVEMENT("&5no movement necessary");
 	

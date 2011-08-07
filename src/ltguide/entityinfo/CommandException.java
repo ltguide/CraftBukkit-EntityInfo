@@ -1,6 +1,5 @@
 package ltguide.entityinfo;
 
-
 class CommandException extends Exception {
 	private static final long serialVersionUID = 1L;
 	

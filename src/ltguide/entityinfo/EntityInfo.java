@@ -19,9 +19,11 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.craftbukkit.CraftWorld;
 import org.bukkit.craftbukkit.entity.CraftAnimals;
+import org.bukkit.craftbukkit.entity.CraftChicken;
 import org.bukkit.craftbukkit.entity.CraftLivingEntity;
 import org.bukkit.craftbukkit.entity.CraftMonster;
 import org.bukkit.craftbukkit.entity.CraftPlayer;
+import org.bukkit.craftbukkit.entity.CraftWolf;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
@@ -37,8 +39,11 @@ import com.nijikokun.bukkit.Permissions.Permissions;
 public class EntityInfo extends JavaPlugin {
 	private final Logger log = Logger.getLogger("Minecraft");
 	private Configuration config;
-	private Map<String, Integer> entityLast;
+	
+	private Map<String, Integer> entityLast = new HashMap<String, Integer>();
+	private Map<String, String> entityColor = new HashMap<String, String>();
 	private int maxResults;
+	private int maxDistance;
 	
 	public PermissionHandler Permissions;
 	public boolean checkPermissions;
@@ -47,7 +52,7 @@ public class EntityInfo extends JavaPlugin {
 	
 	public void onEnable() {
 		getServer().getPluginManager().registerEvent(Event.Type.PLUGIN_DISABLE, new EntityInfoServerListener(this), Priority.Monitor, this);
-		reload(null);
+		reload();
 		sendLog("v" + getDescription().getVersion() + " enabled");
 	}
 	
@@ -70,8 +75,8 @@ public class EntityInfo extends JavaPlugin {
 		log.info("[" + getDescription().getName() + "] " + ChatColor.stripColor(msg));
 	}
 	
-	private void reload(CommandSender sender) {
-		entityLast = new HashMap<String, Integer>();
+	private void reload() {
+		entityLast.clear();
 		
 		Permissions = null;
 		checkPermissions = true;
@@ -79,22 +84,21 @@ public class EntityInfo extends JavaPlugin {
 		if (config == null) config = getConfiguration();
 		else config.load();
 		
-		boolean saveConfig = false;
-		if (config.getProperty("maxresults") == null) saveConfig = true;
-		maxResults = config.getInt("maxresults", 5);
+		ConfigDefault configDefault = new ConfigDefault(config);
 		
-		for (CommandMessage message : CommandMessage.values()) {
-			String key = "messages." + message.name().toLowerCase();
-			String value = config.getString(key);
-			if (value == null) {
-				config.setProperty(key, message.getMessage());
-				saveConfig = true;
-			}
-			else message.setMessage(value);
-		}
-		if (saveConfig && !config.save()) sendLog("error saving config file");
+		maxResults = configDefault.getInt("maxresults", 5);
+		maxDistance = configDefault.getInt("maxdistance", 64);
 		
-		if (sender != null) sendMsg(sender, CommandMessage.RELOADDONE.toString(), true);
+		entityColor.clear();
+		entityColor.put("animal", configDefault.getColor("colors.animal", "&2"));
+		entityColor.put("monster", configDefault.getColor("colors.monster", "&4"));
+		entityColor.put("player", configDefault.getColor("colors.player", "&9"));
+		entityColor.put("other", configDefault.getColor("colors.other", "&6"));
+		
+		for (CommandMessage message : CommandMessage.values())
+			message.setMessage(configDefault.getString("messages." + message.name().toLowerCase(), message.getMessage()));
+		
+		if (!configDefault.save()) sendLog("error saving config file");
 	}
 	
 	public Boolean hasPermission(CommandSender sender, String node) {
@@ -124,7 +128,8 @@ public class EntityInfo extends JavaPlugin {
 			
 			if (args[0].equalsIgnoreCase("reload")) {
 				if (!hasPermission(sender, "giveto.reload")) throw new CommandException(CommandMessage.PERMISSION);
-				reload(sender);
+				reload();
+				sendMsg(sender, CommandMessage.RELOADDONE.toString(), true);
 				return true;
 			}
 			
@@ -153,7 +158,7 @@ public class EntityInfo extends JavaPlugin {
 	private void entityById(Player player, int entityId) throws CommandException {
 		entityLast.put(player.getName(), entityId);
 		
-		List<Entity> entities = player.getNearbyEntities(64, 128, 64);
+		List<Entity> entities = player.getNearbyEntities(maxDistance, 128, maxDistance);
 		for (Entity entity : entities) {
 			if (entity.getEntityId() == entityId) {
 				entityInfo(player, entity);
@@ -168,7 +173,7 @@ public class EntityInfo extends JavaPlugin {
 		Pattern pattern = Pattern.compile("Craft" + entityType + ".*", Pattern.CASE_INSENSITIVE);
 		
 		int count = 0;
-		List<Entity> entities = player.getNearbyEntities(64, 128, 64);
+		List<Entity> entities = player.getNearbyEntities(maxDistance, 128, maxDistance);
 		for (Entity entity : entities) {
 			if (pattern.matcher(entity.getClass().getSimpleName()).matches()) {
 				entityInfo(player, entity);
@@ -229,13 +234,18 @@ public class EntityInfo extends JavaPlugin {
 		//world.getBlockAt(leftCorner).setType(Material.NETHERRACK);
 		//world.getBlockAt(rightCorner).setType(Material.GLOWSTONE);
 		
+		List<Entity> entities = new ArrayList<Entity>();
 		AxisAlignedBB bBox = AxisAlignedBB.a(leftCorner.getX(), leftCorner.getY(), leftCorner.getZ(), rightCorner.getX(), rightCorner.getY(), rightCorner.getZ());
+		
 		int count = 0;
 		int distance = 4;
-		while (distance < 64) {
+		while (distance < maxDistance) {
 			for (Object object : worldServer.b(entityPlayer, bBox)) {
 				if (object instanceof EntityLiving) {
 					Entity entity = ((net.minecraft.server.Entity) object).getBukkitEntity();
+					if (entities.contains(entity)) continue;
+					entities.add(entity);
+					
 					entityInfo(player, entity);
 					if (count++ == 0) entityLast.put(player.getName(), entity.getEntityId());
 				}
@@ -256,17 +266,41 @@ public class EntityInfo extends JavaPlugin {
 		if (!(entity instanceof CraftLivingEntity)) return;
 		
 		Location entityLocation = entity.getLocation();
-		String clazz = entity.getClass().getSimpleName().replace("Craft", "");
-		ChatColor color = ChatColor.GOLD;
+		sendMsg(player, CommandMessage.INFO.toString(getEntityName(entity), entity.getEntityId(), getEntityHealth(entity), entityLocation.getX(), entityLocation.getY(), entityLocation.getZ(), getMovements(player.getLocation(), entityLocation)));
+	}
+	
+	private String getEntityName(Entity entity) {
+		String name = entity.getClass().getSimpleName().replace("Craft", "");
 		
-		if (entity instanceof CraftAnimals) color = ChatColor.DARK_GREEN;
-		else if (entity instanceof CraftMonster) color = ChatColor.DARK_RED;
+		String color;
+		if (entity instanceof CraftAnimals) color = entityColor.get("animal");
+		else if (entity instanceof CraftMonster) color = entityColor.get("monster");
 		else if (entity instanceof CraftPlayer) {
-			clazz = ((CraftPlayer) entity).getName();
-			color = ChatColor.BLUE;
+			name = ((CraftPlayer) entity).getName();
+			color = entityColor.get("player");
 		}
+		else color = entityColor.get("animal");
 		
-		sendMsg(player, CommandMessage.INFO.toString(color + clazz, entity.getEntityId(), entityLocation.getX(), entityLocation.getY(), entityLocation.getZ(), getMovements(player.getLocation(), entityLocation)));
+		return color + name;
+	}
+	
+	private String getEntityHealth(Entity entity) {
+		int health = (int) ((((CraftLivingEntity) entity).getHealth() / getMaxHealth(entity)) * 100);
+		
+		ChatColor color;
+		if (health < 34) color = ChatColor.RED;
+		else if (health < 67) color = ChatColor.GOLD;
+		else color = ChatColor.DARK_GREEN;
+		
+		return color.toString() + health + "%";
+	}
+	
+	private double getMaxHealth(Entity entity) {
+		if (entity instanceof CraftMonster) return 20;
+		if (entity instanceof CraftPlayer) return 20;
+		if (entity instanceof CraftChicken) return 4;
+		if (entity instanceof CraftWolf) return 8;
+		return 10;
 	}
 	
 	private double getDegrees(double yaw) {
