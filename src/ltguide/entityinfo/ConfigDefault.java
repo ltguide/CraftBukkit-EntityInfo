@@ -1,5 +1,6 @@
 package ltguide.entityinfo;
 
+import org.bukkit.ChatColor;
 import org.bukkit.configuration.file.FileConfiguration;
 
 class ConfigDefault {
@@ -20,7 +21,7 @@ class ConfigDefault {
 	}
 
 	public String getColor(String node, String value) {
-		return getString(node, value).replaceAll("(?i)&([0-F])", "\u00A7$1");
+		return ChatColor.translateAlternateColorCodes('&', getString(node, value));
 	}
 
 	public String getString(String node, String value) {
