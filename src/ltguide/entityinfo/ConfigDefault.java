@@ -1,7 +1,5 @@
 package ltguide.entityinfo;
 
-import java.io.IOException;
-
 import org.bukkit.ChatColor;
 import org.bukkit.configuration.file.FileConfiguration;
 
@@ -42,12 +40,13 @@ class ConfigDefault {
 
 	public boolean save() {
 		if (saveConfig)
-			try {
-				config.save("config.yml");
-				return true;
-			} catch (IOException e) {
-				return false;
-			}
+			EntityInfo.INSTANCE.saveConfig();
+		// try {
+		// config.save("config.yml");
+		// return true;
+		// } catch (IOException e) {
+		// return false;
+		// }
 		return true;
 		// return saveConfig ? EntityInfo.INSTANCE.saveConfig() : true;
 	}
