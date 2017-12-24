@@ -1,21 +1,26 @@
 package ltguide.entityinfo;
 
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
 import org.bukkit.event.server.PluginDisableEvent;
-import org.bukkit.event.server.ServerListener;
 
-class EntityInfoServerListener extends ServerListener {
+class EntityInfoServerListener implements Listener {
+
 	private EntityInfo plugin;
-	
+
 	public EntityInfoServerListener(EntityInfo plugin) {
 		this.plugin = plugin;
 	}
-	
-	@Override
+
+	@EventHandler
 	public void onPluginDisable(PluginDisableEvent event) {
-		if (plugin.Permissions != null && event.getPlugin().getDescription().getName().equalsIgnoreCase("Permissions")) {
-			plugin.Permissions = null;
-			plugin.checkPermissions = true;
-		}
+		// if (plugin.Permissions != null
+		// &&
+		// event.getPlugin().getDescription().getName().equalsIgnoreCase("Permissions"))
+		// {
+		// plugin.Permissions = null;
+		plugin.checkPermissions = true;
+		// }
 	}
-	
+
 }
