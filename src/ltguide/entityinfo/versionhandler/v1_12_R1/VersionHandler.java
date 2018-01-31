@@ -152,6 +152,9 @@ public class VersionHandler implements IVersionHandler {
 	private String getEntityName(Entity entity) {
 		String name = entity.getCustomName();
 
+		if (name == null)
+			name = entity.getName();
+
 		String color;
 		if (entity instanceof CraftAnimals)
 			color = EntityInfo.INSTANCE.getColor("animal");

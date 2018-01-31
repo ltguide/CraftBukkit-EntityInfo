@@ -7,9 +7,11 @@ import java.util.logging.Logger;
 import java.util.regex.Pattern;
 
 import org.bukkit.ChatColor;
+import org.bukkit.Material;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
@@ -34,7 +36,9 @@ public class EntityInfo extends JavaPlugin {
 	public IVersionHandler vh;
 
 	@Override
-	public void onDisable() {}
+	public void onDisable() {
+		INSTANCE = null;
+	}
 
 	@Override
 	public void onEnable() {
@@ -54,6 +58,8 @@ public class EntityInfo extends JavaPlugin {
 			return;
 		}
 		this.getLogger().info("Loading support for " + version + ".");
+	
+		INSTANCE = this;
 
 		// getServer().getPluginManager().registerEvent(Event.Type.PLUGIN_DISABLE,
 		// new EntityInfoServerListener(this), Priority.Monitor, this);
